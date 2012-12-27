@@ -1,0 +1,16 @@
+description: "TMUX profile"
+sessions:
+  - name: "tmux-profile"
+    default-path: "/Users/joey/Development/tmux-profile"
+    attach: true
+    windows:
+      - name: editor
+        cmd: vim
+        panes:
+          - cmd: git status
+            split: v
+            size: 10
+          - cmd: git l
+            split: h
+      - name: manual
+        cmd: man tmux

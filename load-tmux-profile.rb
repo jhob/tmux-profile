@@ -56,7 +56,7 @@ def load_profile profile_name
             return
         end
 
-        dir = session["default-path"]
+        dir = session["dir"]
         
         window = session["windows"].first || default_window
 
@@ -107,7 +107,8 @@ def load_profile profile_name
 end
 
 
-# main
-check_deps()
-load_profile ARGV.first
+if __FILE__ == $0
+    check_deps()
+    load_profile ARGV.first
+end
 

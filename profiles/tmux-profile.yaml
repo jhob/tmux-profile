@@ -1,7 +1,7 @@
-description: "TMUX profile"
+description: TMUX profile
 sessions:
-  - name: "tmux-profile"
-    default-path: "/Users/joey/Development/tmux-profile"
+  - name: tmux-profile
+    dir: ~/Development/tmux-profile
     attach: true
     windows:
       - name: editor

@@ -53,7 +53,7 @@ def load_profile profile_name
 
         if session_exists? session["name"]
             puts "Session '#{session["name"]}' already exists. Skipping."
-            return
+            next
         end
 
         dir = session["dir"]
@@ -109,6 +109,7 @@ end
 
 if __FILE__ == $0
     check_deps()
+    run "tmux start-server"
     load_profile ARGV.first
 end
 

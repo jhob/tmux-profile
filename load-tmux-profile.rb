@@ -78,8 +78,17 @@ def load_profile profile_name
         # initialize windows
         session["windows"].each do |window|
             n = "#{session["name"]}:#{window["name"]}"
+
+            # run commands
             cmds = window["cmd"]
-            run_in_pane n, cmds unless cmds.nil?
+            cmds ||= []
+            cmds = [cmds] unless cmds.is_a? Array
+            # change dir first
+            if window["dir"]
+                cmds.unshift "cd \"#{window["dir"]}\""
+            end
+            run_in_pane n, cmds
+
             send = window["send"]
             send_to_pane n, send unless send.nil?
             panes = window["panes"] || []

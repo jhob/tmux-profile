@@ -1,4 +1,7 @@
+#!/usr/bin/env ruby
+#
 require 'yaml'
+require 'optparse'
 
 
 def check_deps
@@ -35,6 +38,10 @@ def run_in_pane pane, cmds
     end
 end
 
+def profile_dir
+    File.expand_path('./profiles', File.dirname(__FILE__))
+end
+
 
 # Loads profile by name
 def load_profile profile_name
@@ -42,7 +49,6 @@ def load_profile profile_name
     default_window = { "name" => "default" }
 
     begin
-        profile_dir = File.expand_path('./profiles', File.dirname(__FILE__))
         profile = YAML.load_file "#{profile_dir}/#{profile_name}.yaml"
     rescue
         raise "Profile '#{profile_name}' doesn't exist"
@@ -116,9 +122,33 @@ def load_profile profile_name
 end
 
 
+options = {}
+parser = OptionParser.new do |opts|
+
+  opts.banner = "Usage: #{ File.basename __FILE__ } [-l] PROFILE"
+
+  opts.on("-l", "--list", "List available profiles") do |l|
+    options[:list] = l
+  end
+
+end
+
+
 if __FILE__ == $0
+
     check_deps()
-    run "tmux start-server"
-    load_profile ARGV.first
+    parser.parse! ARGV
+
+    if options[:list]
+        puts Dir.new(profile_dir)
+                .select { |f| f =~ /\.yaml$/ }
+                .map { |f| f.sub ".yaml", "" }
+                .join "\n"
+    elsif ARGV.length > 0
+		run "tmux start-server"
+        load_profile ARGV.first
+    else
+        puts parser
+    end
 end
 

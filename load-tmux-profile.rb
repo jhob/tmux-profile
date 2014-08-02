@@ -10,12 +10,13 @@ end
 
 
 def session_exists? name
-    system "tmux has-session -t #{name}"
+    system "tmux has-session -t #{name} 2> /dev/null"
 end
 
 
 # Runs command in current shell
-def run cmd
+def run cmd, args=[]
+    cmd = "#{cmd} #{args.join ' '}".strip
     puts cmd
     `#{cmd}`
 end
@@ -23,8 +24,11 @@ end
 
 # Sends keys to tmux pane
 def send_to_pane pane, keys
-    keys = cmds.join " " if keys.is_a? Array
-    run "tmux send-keys -t #{pane} #{keys}"
+    keys = [ keys ] unless keys.is_a? Array
+    keys = keys.map { |key|
+        "'#{key}'".gsub /'''/, '"\'"'
+    }
+    run "tmux send-keys", ["-t #{pane}", keys.join(' ')]
 end
 
 
@@ -32,9 +36,9 @@ end
 def run_in_pane pane, cmds
     cmds = [ cmds ] unless cmds.is_a? Array
     cmds.each do |cmd|
-        cmd = cmd.split("").join("' '")
-        cmd = cmd.gsub /'''/, '"\'"'
-        send_to_pane pane, "'#{cmd}' Enter"
+        keys = cmd.split("")
+        keys << "Enter"
+        send_to_pane pane, keys
     end
 end
 
@@ -62,8 +66,6 @@ def load_profile profile_name
             next
         end
 
-        dir = session["dir"]
-        
         window = session["windows"].first || default_window
 
         # get current terminal height/width
@@ -71,37 +73,43 @@ def load_profile profile_name
         h = `tput lines`.strip
 
         # create session
-        run "cd #{dir} ; tmux new-session -s #{session["name"]} -n #{window["name"]} -x #{w} -y #{h} -d"
-
-        # set default directory
-        run "tmux set-option -t #{session["name"]} default-path \"#{dir}\""
+        window["dir"] ||= session["dir"]
+        args = []
+        args << "-s #{session["name"]}"
+        args << "-n #{window["name"]}"
+        args << "-c #{window["dir"]}" unless window["dir"].nil?
+        args << "-x #{w}"
+        args << "-y #{h}"
+        args << "-d"
+        run "tmux new-session", args
 
         # create more windows
         session["windows"][1..-1].each do |window|
-            run "tmux new-window -t #{session["name"]} -n #{window["name"]} -d"
+            window["dir"] ||= session["dir"]
+            args = []
+            args << "-t #{session["name"]}"
+            args << "-n #{window["name"]}"
+            args << "-c #{window["dir"]}" unless window["dir"].nil?
+            args << "-d"
+            run "tmux new-window", args
         end
 
         # initialize windows
         session["windows"].each do |window|
             n = "#{session["name"]}:#{window["name"]}"
 
-            # run commands
-            cmds = window["cmd"]
-            cmds ||= []
-            cmds = [cmds] unless cmds.is_a? Array
-            # change dir first
-            if window["dir"]
-                cmds.unshift "cd \"#{window["dir"]}\""
-            end
-            run_in_pane n, cmds
+            run_in_pane n, window["cmd"] unless window["cmd"].nil?
+            send_to_pane n, window["send"] unless window["send"].nil?
 
-            send = window["send"]
-            send_to_pane n, send unless send.nil?
             panes = window["panes"] || []
             panes.each do |pane|
-                flags = "-#{ pane["split"][0] || "h" } "
-                flags += "-l #{pane["size"]} " unless pane["size"].nil?
-                run "tmux split-window -t #{n} #{flags}"
+                pane["dir"] ||= window["dir"]
+                args = []
+                args << "-t #{n}"
+                args << "-c #{pane["dir"]}" unless pane["dir"].nil?
+                args << "-#{ pane["split"][0] || "h" } "
+                args << "-l #{pane["size"]} " unless pane["size"].nil?
+                run "tmux split-window", args
                 cmds = pane["cmd"]
                 run_in_pane n, cmds unless cmds.nil?
                 send = pane["send"]
@@ -114,7 +122,7 @@ def load_profile profile_name
     # attach first specified session
     profile["sessions"].each do |session|
         if session["attach"]
-            run "tmux attach -t #{session["name"]}"
+            run "tmux attach", ["-t #{session["name"]}"]
             break
         end
     end

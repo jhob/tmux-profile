@@ -73,11 +73,11 @@ def load_profile profile_name
         h = `tput lines`.strip
 
         # create session
-        window["dir"] ||= session["dir"]
+        current_dir = session["dir"] || window["dir"]
         args = []
         args << "-s #{session["name"]}"
         args << "-n #{window["name"]}"
-        args << "-c #{window["dir"]}" unless window["dir"].nil?
+        args << "-c #{current_dir}" unless current_dir.nil?
         args << "-x #{w}"
         args << "-y #{h}"
         args << "-d"
@@ -85,11 +85,11 @@ def load_profile profile_name
 
         # create more windows
         session["windows"][1..-1].each do |window|
-            window["dir"] ||= session["dir"]
+            current_dir = window["dir"] || session["dir"]
             args = []
             args << "-t #{session["name"]}"
             args << "-n #{window["name"]}"
-            args << "-c #{window["dir"]}" unless window["dir"].nil?
+            args << "-c #{current_dir}" unless current_dir.nil?
             args << "-d"
             run "tmux new-window", args
         end
@@ -103,10 +103,10 @@ def load_profile profile_name
 
             panes = window["panes"] || []
             panes.each do |pane|
-                pane["dir"] ||= window["dir"]
+                current_dir = pane["dir"] || window["dir"] || session["dir"]
                 args = []
                 args << "-t #{n}"
-                args << "-c #{pane["dir"]}" unless pane["dir"].nil?
+                args << "-c #{current_dir}" unless current_dir.nil?
                 args << "-#{ pane["split"][0] || "h" } "
                 args << "-l #{pane["size"]} " unless pane["size"].nil?
                 run "tmux split-window", args

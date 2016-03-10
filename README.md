@@ -2,7 +2,7 @@ tmux profile
 ------------
 
 tmux-profile is a small script to quickly configure and initialize
-[tmux](http://tmux.sourceforge.net/) sessions.
+[tmux](http://tmux.github.io/) sessions.
 
 
 Installation
@@ -62,7 +62,7 @@ Consider an example.yaml:
 If this file is stored within your `~/.tmux-profiles` directory, then the profile can be
 initialized like so:
 
-ruby load-tmux-profile.rb example
+    ruby load-tmux-profile.rb example
 
 Running this will create (and attach) a single tmux session named 'example',
 with 3 windows:

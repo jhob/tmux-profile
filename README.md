@@ -69,7 +69,8 @@ with 3 windows:
 
 1. the first of which will have 3 panes. One pane will open a file
    in vim, the other two show `git status` and `git log`. This is referencing a
-   helper named `editor`.
+   helper named `editor`. Helpers can be added to the `helpers` directory. Feel
+   free to add/change/contribute them after cloning the repository!
 2. The second window will have two splits, each `ssh`'ing into different
    machines.
 3. The third is much like the second, but into different machines again.

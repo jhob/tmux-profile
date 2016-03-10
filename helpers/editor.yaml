@@ -1,3 +1,5 @@
+# This helper defines a window which opens vim and some git commands
+# in the sessions default directory.
 name: editor
 cmd: vim
 send: gn,t

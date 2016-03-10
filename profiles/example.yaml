@@ -1,15 +1,17 @@
 description: An example profile.
 sessions:
-    - name: example
-      attach: true
-      dir: /tmp/
-      windows:
-        - name: hello
-          cmd: vim hello_world.rb
-          send: g n
-          panes:
-              - split: v
-                size: 10
-                cmd: git status
-        - name: server
-          cmd: ssh foo@bar 
+  - name: example
+    attach: true
+    dir: /tmp/
+    windows:
+      - *editor
+      - name: staging
+        cmd: ssh foo@staging-server-1
+        panes:
+          - split: horizontal
+            cmd: ssh foo@staging-server-2
+      - name: production
+        cmd: ssh bar@production-server-1
+        panes:
+          - split: horizontal
+            cmd: ssh bar@production-server-2

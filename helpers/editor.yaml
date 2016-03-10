@@ -1,0 +1,9 @@
+name: editor
+cmd: vim
+send: gn,t
+panes:
+  - cmd: git status
+    split: vertical
+    size: 20
+  - cmd: git l
+    split: horizontal

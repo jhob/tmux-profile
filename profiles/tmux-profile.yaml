@@ -4,14 +4,6 @@ sessions:
     dir: ~/Development/tmux-profile
     attach: true
     windows:
-      - name: editor
-        cmd: vim
-        send: gn
-        panes:
-          - cmd: git status
-            split: v
-            size: 10
-          - cmd: git l
-            split: h
+      - *editor
       - name: manual
         cmd: man tmux

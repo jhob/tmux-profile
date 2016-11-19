@@ -1,16 +1,21 @@
 #!/usr/bin/env ruby
-#
-require 'yaml'
-require 'optparse'
 
+require 'yaml'
+
+require 'optparse'
 
 def check_deps
   raise "Please install tmux" unless `which tmux` != ""
 end
 
 
+def current_session
+  out = `test -n "\${TMUX+set}" && tmux display-message -p '#S'`.strip
+end
+
 def session_exists? name
-  system "tmux has-session -t #{name} 2> /dev/null"
+  # tmux has-session doesn't work as it returns true for substrings
+  `tmux list-sessions -F "#S"`.split("\n").include? name
 end
 
 
@@ -67,7 +72,7 @@ def load_helpers
 end
 
 # Loads profile by name
-def load_profile profile_name
+def load_profile profile_name, attach_to=nil
 
   default_window = { "name" => "default" }
   yaml_data = ''
@@ -95,7 +100,7 @@ def load_profile profile_name
   profile["sessions"].each do |session|
 
     if session_exists? session["name"]
-      puts "Session '#{session["name"]}' already exists. Skipping."
+      puts "Session '#{session["name"]}' exists."
       next
     end
 
@@ -152,11 +157,22 @@ def load_profile profile_name
 
   end
 
+
   # attach first specified session
-  profile["sessions"].each do |session|
-    if session["attach"]
-      run "tmux attach", ["-t #{session["name"]}"]
-      break
+  if attach_to.nil?
+    profile["sessions"].each do |session|
+      if session["attach"]
+          attach_to = session["name"]
+          break
+      end
+    end
+  end
+
+  unless attach_to.nil?
+    if current_session.empty?
+      run "tmux attach", ["-t #{attach_to}"]
+    elsif current_session != attach_to
+      run "tmux switch-client", ["-t #{attach_to}"]
     end
   end
 
@@ -187,7 +203,8 @@ if __FILE__ == $0
     .join "\n"
   elsif ARGV.length > 0
     run "tmux start-server"
-    load_profile ARGV.first
+    profile_name, attach_to = ARGV.first.split ":"
+    load_profile profile_name, attach_to
   else
     puts parser
   end

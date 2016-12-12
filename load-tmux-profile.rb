@@ -10,7 +10,7 @@ end
 
 
 def current_session
-  out = `test -n "\${TMUX+set}" && tmux display-message -p '#S'`.strip
+  `test -n "\${TMUX+set}" && tmux display-message -p '#S'`.strip
 end
 
 def session_exists? name
@@ -28,12 +28,10 @@ end
 
 
 # Sends keys to tmux pane
-def send_to_pane pane, keys
-  keys = [ keys ] unless keys.is_a? Array
-  keys = keys.map { |key|
-    "'#{key}'".gsub /'''/, '"\'"'
-  }
-  run "tmux send-keys", ["-t #{pane}", keys.join(' ')]
+def send_to_pane pane, cmd
+  cmd = "'#{cmd}'".gsub(/'''/, '"\'"')
+  cmd = "#{cmd} 'Enter'"
+  run "tmux send-keys", ["-t #{pane}", cmd]
 end
 
 
@@ -41,9 +39,7 @@ end
 def run_in_pane pane, cmds
   cmds = [ cmds ] unless cmds.is_a? Array
   cmds.each do |cmd|
-    keys = cmd.split("")
-    keys << "Enter"
-    send_to_pane pane, keys
+    send_to_pane pane, cmd
   end
 end
 
@@ -122,26 +118,26 @@ def load_profile profile_name, attach_to=nil
     run "tmux new-session", args
 
     # create more windows
-    session["windows"][1..-1].each do |window|
-      current_dir = window["dir"] || session["dir"]
+    session["windows"][1..-1].each do |new_window|
+      current_dir = new_window["dir"] || session["dir"]
       args = []
       args << "-t #{session["name"]}"
-      args << "-n #{window["name"]}"
+      args << "-n #{new_window["name"]}"
       args << "-c #{current_dir}" unless current_dir.nil?
       args << "-d"
       run "tmux new-window", args
     end
 
     # initialize windows
-    session["windows"].each do |window|
-      n = "#{session["name"]}:#{window["name"]}"
+    session["windows"].each do |new_window|
+      n = "#{session["name"]}:#{new_window["name"]}"
 
-      run_in_pane n, window["cmd"] unless window["cmd"].nil?
-      send_to_pane n, window["send"] unless window["send"].nil?
+      run_in_pane n, new_window["cmd"] unless new_window["cmd"].nil?
+      send_to_pane n, new_window["send"] unless new_window["send"].nil?
 
-      panes = window["panes"] || []
+      panes = new_window["panes"] || []
       panes.each do |pane|
-        current_dir = pane["dir"] || window["dir"] || session["dir"]
+        current_dir = pane["dir"] || new_window["dir"] || session["dir"]
         args = []
         args << "-t #{n}"
         args << "-c #{current_dir}" unless current_dir.nil?

@@ -106,8 +106,16 @@ def load_profile profile_name, attach_to=nil
     w = `tput cols`.strip
     h = `tput lines`.strip
 
-    # create session
     current_dir = session["dir"] || window["dir"]
+    
+    # run setup command for session
+    setup_cmd = session["setup_cmd"]
+    puts setup_cmd
+    if setup_cmd
+      run "cd #{current_dir} && #{setup_cmd}"
+    end
+
+    # create session
     args = []
     args << "-s #{session["name"]}"
     args << "-n #{window["name"]}"

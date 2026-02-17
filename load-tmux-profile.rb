@@ -115,7 +115,7 @@ def load_profile profile_name, attach_to=nil
       run "cd #{current_dir} && #{setup_cmd}"
     end
 
-    # create session
+    # create session (uses session dir as default for new windows)
     args = []
     args << "-s #{session["name"]}"
     args << "-n #{window["name"]}"
@@ -124,6 +124,12 @@ def load_profile profile_name, attach_to=nil
     args << "-y #{h}"
     args << "-d"
     run "tmux new-session", args
+
+    # if first window has its own dir, respawn its pane with the correct directory
+    first_window_dir = window["dir"]
+    if first_window_dir && first_window_dir != current_dir
+      run "tmux respawn-pane", ["-k", "-c #{first_window_dir}", "-t #{session["name"]}:#{window["name"]}"]
+    end
 
     # create more windows
     session["windows"][1..-1].each do |new_window|

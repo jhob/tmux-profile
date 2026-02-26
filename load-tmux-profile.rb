@@ -68,7 +68,7 @@ def load_helpers
 end
 
 # Loads profile by name
-def load_profile profile_name, attach_to=nil
+def load_profile profile_name, only_session: nil, attach: nil, force_attach: false, no_attach: false
 
   default_window = { "name" => "default" }
   yaml_data = ''
@@ -92,8 +92,15 @@ def load_profile profile_name, attach_to=nil
     raise "Profile '#{profile_name}' isn't valid YAML"
   end
 
-  # initialize all sessions
-  profile["sessions"].each do |session|
+  sessions = profile["sessions"]
+
+  if only_session
+    sessions = sessions.select { |s| s["name"] == only_session }
+    raise "Session '#{only_session}' not found in profile '#{profile_name}'" if sessions.empty?
+  end
+
+  # initialize sessions
+  sessions.each do |session|
 
     if session_exists? session["name"]
       puts "Session '#{session["name"]}' exists."
@@ -107,7 +114,7 @@ def load_profile profile_name, attach_to=nil
     h = `tput lines`.strip
 
     current_dir = session["dir"] || window["dir"]
-    
+
     # run setup command for session
     setup_cmd = session["setup_cmd"]
     puts setup_cmd
@@ -168,21 +175,51 @@ def load_profile profile_name, attach_to=nil
   end
 
 
-  # attach first specified session
-  if attach_to.nil?
-    profile["sessions"].each do |session|
+  # Resolve which session to attach to (first match wins):
+  # 1. --no-attach → skip entirely
+  # 2. --attach=X → attach/switch to X (forced)
+  # 3. --attach → force attach to the auto-determined session
+  # 4. SESSION arg → attach to the filtered session
+  # 5. Top-level attach: from YAML
+  # 6. Deprecated per-session attach: true (with warning)
+  # 7. First session in the loaded list
+  #
+  # force_attach (--attach with or without value) means always attach/switch,
+  # even when already inside tmux.
+  return if no_attach
+
+  attach_to = nil
+
+  if attach
+    attach_to = attach
+  elsif only_session
+    attach_to = only_session
+  elsif profile["attach"]
+    attach_to = profile["attach"]
+  else
+    sessions.each do |session|
       if session["attach"]
-          attach_to = session["name"]
-          break
+        $stderr.puts "Warning: 'attach: true' on session '#{session["name"]}' is deprecated. Use top-level 'attach: #{session["name"]}' instead."
+        attach_to = session["name"]
+        break
       end
     end
+    attach_to = sessions.first["name"] if attach_to.nil? && !sessions.empty?
   end
 
-  unless attach_to.nil?
+  return if attach_to.nil?
+
+  if force_attach
+    # --attach (with or without =SESSION) always attaches/switches
     if current_session.empty?
       run "tmux attach", ["-t #{attach_to}"]
     elsif current_session != attach_to
       run "tmux switch-client", ["-t #{attach_to}"]
+    end
+  else
+    # No --attach flag: only attach if not already inside tmux
+    if current_session.empty?
+      run "tmux attach", ["-t #{attach_to}"]
     end
   end
 
@@ -192,10 +229,19 @@ end
 options = {}
 parser = OptionParser.new do |opts|
 
-  opts.banner = "Usage: #{ File.basename __FILE__ } [-l] PROFILE"
+  opts.banner = "Usage: #{ File.basename __FILE__ } [options] PROFILE [SESSION]"
 
   opts.on("-l", "--list", "List available profiles") do |l|
     options[:list] = l
+  end
+
+  opts.on("-a", "--attach [SESSION]", "Force attach/switch (optionally to a specific session)") do |s|
+    options[:force_attach] = true
+    options[:attach] = s
+  end
+
+  opts.on("--no-attach", "Do not attach to any session after loading") do
+    options[:no_attach] = true
   end
 
 end
@@ -213,8 +259,9 @@ if __FILE__ == $0
     .join "\n"
   elsif ARGV.length > 0
     run "tmux start-server"
-    profile_name, attach_to = ARGV.first.split ":"
-    load_profile profile_name, attach_to
+    profile_name = ARGV[0]
+    only_session = ARGV[1]
+    load_profile profile_name, only_session: only_session, attach: options[:attach], force_attach: !!options[:force_attach], no_attach: !!options[:no_attach]
   else
     puts parser
   end

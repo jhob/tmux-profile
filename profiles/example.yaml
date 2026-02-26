@@ -1,7 +1,7 @@
 description: An example profile.
+attach: example
 sessions:
   - name: example
-    attach: true
     dir: /tmp/
     windows:
       - *editor
